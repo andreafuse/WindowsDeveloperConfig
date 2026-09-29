@@ -9,8 +9,8 @@ Set-StrictMode -Version Latest
 function Get-DevConfigUvCleanupPath {
     foreach ($name in @('uv', 'uvx', 'uvw')) {
         Get-Command $name -CommandType Application -ErrorAction SilentlyContinue |
-            Where-Object { Test-Path -LiteralPath $_.Source } |
-            Select-Object -ExpandProperty Source
+        Where-Object { Test-Path -LiteralPath $_.Source } |
+        Select-Object -ExpandProperty Source
     }
     foreach ($root in @($env:LOCALAPPDATA, $env:APPDATA)) {
         $path = Join-Path $root 'uv'
@@ -30,7 +30,8 @@ function Remove-DevConfigUv {
     }
     try {
         Invoke-DevConfigPackageCleanup -Ids @($Id)
-    } finally {
+    }
+    finally {
         foreach ($path in @(Get-DevConfigUvCleanupPath | Select-Object -Unique)) {
             Remove-Item -LiteralPath $path -Recurse -Force
         }
@@ -95,23 +96,7 @@ function Invoke-PackagesPhase {
             Id             = 'Git.Git'
             UninstallOrder = 6
             InnoUninstall  = @{ DisplayName = 'Git'; Publisher = 'The Git Development Community' }
-        }
-        @{
-            Name           = 'GitHubCLI'
-            Id             = 'GitHub.cli'
-            UninstallOrder = 7
-        }
-        @{
-            Name           = 'AzureCLI'
-            Id             = 'Microsoft.AzureCLI'
-            UninstallOrder = 9
-        }
-        @{
-            Name                   = 'GitHubCopilot'
-            Id                     = 'GitHub.Copilot'
-            UninstallOrder         = 4
-            AdditionalUninstallIds = @('XPDC8MMRVCF73P', 'GitHub Copilot CLI')
-        }
+        }        
         @{
             Name           = 'VSCode'
             Id             = 'Microsoft.VisualStudioCode'
@@ -140,13 +125,7 @@ function Invoke-PackagesPhase {
             Name           = 'UV'
             Id             = 'astral-sh.uv'
             UninstallOrder = 1
-        }
-        @{
-            Name                   = 'NodeJS'
-            Id                     = 'OpenJS.NodeJS.LTS'
-            UninstallOrder         = 3
-            AdditionalUninstallIds = @('OpenJS.NodeJS')
-        }
+        }       
         @{
             Name           = 'nvmForNode'
             Id             = 'CoreyButler.NVMforWindows'
@@ -184,7 +163,7 @@ function Invoke-PackagesPhase {
 
     if ($Script:DevConfigAction -eq 'Uninstall') {
         $cleanupPackages = $packages | Where-Object { -not $_['KeepOnUninstall'] } |
-            Sort-Object { [int]$_['UninstallOrder'] }
+        Sort-Object { [int]$_['UninstallOrder'] }
         $steps = @(
             New-DevConfigRegistryStep -Setting $powerToysNotifications -Reset
             foreach ($package in $cleanupPackages) {
@@ -192,10 +171,10 @@ function Invoke-PackagesPhase {
                     'UV' {
                         New-DevConfigStep -Name 'UvCleanup' -Description 'Remove uv executables, caches, and local data' -BestEffort `
                             -Check {
-                                param($Id)
-                                @(Get-DevConfigUvCleanupPath).Count -eq 0 -and
-                                    (Invoke-DevConfigPackageCleanup -Ids @($Id) -CheckOnly)
-                            } `
+                            param($Id)
+                            @(Get-DevConfigUvCleanupPath).Count -eq 0 -and
+                            (Invoke-DevConfigPackageCleanup -Ids @($Id) -CheckOnly)
+                        } `
                             -Apply { param($Id) Remove-DevConfigUv -Id $Id } `
                             -ArgumentList @($package.Id)
                     }
@@ -228,12 +207,12 @@ function Invoke-PackagesPhase {
         New-DevConfigStep -Name $package.Name -Description "winget install $($package.Id)" -BestEffort `
             -Check { param($Id, $Large) Test-DevConfigWingetPackageInstalled -Id $Id } `
             -Apply {
-                param($Id, $Large)
-                # Large packages can have several quiet download minutes because WinGet reports no progress here.
-                if ($Large) { Write-Host '  (Large download -- several quiet minutes here are normal.)' -ForegroundColor DarkGray }
-                Install-DevConfigWingetPackage -Id $Id
-                Wait-DevConfigWingetPackageSettled -Id $Id
-            } `
+            param($Id, $Large)
+            # Large packages can have several quiet download minutes because WinGet reports no progress here.
+            if ($Large) { Write-Host '  (Large download -- several quiet minutes here are normal.)' -ForegroundColor DarkGray }
+            Install-DevConfigWingetPackage -Id $Id
+            Wait-DevConfigWingetPackageSettled -Id $Id
+        } `
             -ArgumentList @($package.Id, $package.ContainsKey('Large'))
     }
 

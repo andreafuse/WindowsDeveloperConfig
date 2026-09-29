@@ -8,12 +8,15 @@ Set-StrictMode -Version Latest
 
 # Exact text is needed to recognize existing setup blocks.
 $Script:OhMyPoshInitCommand = @'
-$(if (Get-Command 'oh-my-posh' -ErrorAction SilentlyContinue) { 
-  oh-my-posh init pwsh
-  # Set output encoding to UTF-8
-  [Console]::OutputEncoding =[System.Text.Encoding]::UTF8
-  # Set input encoding to UTF-8 (for reading user input with non-ASCII chars)
-  [Console]::InputEncoding =[System.Text.Encoding]::UTF8
+$($ModulesPath = Join-Path $PSScriptRoot 'ProfileModules'
+
+if (Test-Path $ModulesPath) {
+    Get-ChildItem -Path $ModulesPath -Filter '*.ps1' | Sort-Object Name | ForEach-Object {
+        . $_.FullName
+    }
+}
+else {
+    Write-Warning "Cartella moduli non trovata: $ModulesPath"
 })
 '@
 
@@ -63,13 +66,13 @@ function Test-DevConfigOhMyPoshInitPresent {
     )
     $ast = Get-DevConfigProfileAst -Content $Content
     return $null -ne $ast.Find({
-        param($node)
-        $node -is [System.Management.Automation.Language.CommandAst] -and
+            param($node)
+            $node -is [System.Management.Automation.Language.CommandAst] -and
             $node.GetCommandName() -match '(^|[\\/])oh-my-posh(?:\.exe)?$' -and
             $node.CommandElements.Count -gt 1 -and
             $node.CommandElements[1] -is [System.Management.Automation.Language.StringConstantExpressionAst] -and
             $node.CommandElements[1].Value -eq 'init'
-    }, $true)
+        }, $true)
 }
 
 function Test-DevConfigOhMyPoshProfileConfigured {
@@ -80,7 +83,7 @@ function Test-DevConfigOhMyPoshProfileConfigured {
     $content = [string](Read-DevConfigTextFile -Path $profilePath) -replace "`r`n", "`n"
     $desiredBlock = Get-DevConfigOhMyPoshProfileBlock
     return $content.Contains($desiredBlock) -and
-        -not (Test-DevConfigOhMyPoshInitPresent -Content $content.Replace($desiredBlock, ''))
+    -not (Test-DevConfigOhMyPoshInitPresent -Content $content.Replace($desiredBlock, ''))
 }
 
 function Set-DevConfigOhMyPoshProfile {
@@ -100,9 +103,11 @@ function Set-DevConfigOhMyPoshProfile {
 
     if ($content.Contains($desiredBlock)) {
         return
-    } elseif ($content.Contains($legacyBlock)) {
+    }
+    elseif ($content.Contains($legacyBlock)) {
         $content = $content.Replace($legacyBlock, $desiredBlock)
-    } else {
+    }
+    else {
         if ($content -and -not $content.EndsWith("`n")) {
             $content += "`n"
         }

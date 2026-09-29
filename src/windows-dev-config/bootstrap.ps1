@@ -40,7 +40,7 @@ function Invoke-CalmOsBootstrap {
     $ErrorActionPreference = 'Stop'
     Set-StrictMode -Version Latest
 
-    $repo = 'microsoft/WindowsDeveloperConfig'
+    $repo = 'andreafuse/WindowsDeveloperConfig'
     $microsoftSignerSubject = 'CN=Microsoft Corporation, O=Microsoft Corporation, L=Redmond, S=Washington, C=US'
 
     # Reject refs that could escape the repository path.
@@ -95,7 +95,7 @@ function Invoke-CalmOsBootstrap {
             Set-StrictMode -Version Latest
             [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
             $flow = if ($AllowUnsigned) { 'src/windows-dev-config' } else { 'windows-dev-config' }
-            $baseUri = "https://raw.githubusercontent.com/microsoft/WindowsDeveloperConfig/$Ref/$flow"
+            $baseUri = "https://raw.githubusercontent.com/$repo/$Ref/$flow"
             $securityCode = (Invoke-RestMethod -Uri "$baseUri/steps/_security.ps1" -UseBasicParsing -TimeoutSec 60).TrimStart([char]0xFEFF)
             if (-not $AllowUnsigned) {
                 $signature = Get-AuthenticodeSignature -Content ([Text.Encoding]::Unicode.GetBytes($securityCode)) -SourcePathOrExtension '.ps1'
@@ -122,7 +122,8 @@ function Invoke-CalmOsBootstrap {
                     throw 'The installed bootstrap does not match the verified download. Setup was not started.'
                 }
                 Unblock-File -LiteralPath $target
-            } finally {
+            }
+            finally {
                 if (Test-Path -LiteralPath $work) {
                     Remove-Item -LiteralPath $work -Recurse -Force
                 }
@@ -153,7 +154,8 @@ function Invoke-CalmOsBootstrap {
     # Windows PowerShell 5.1 still defaults to protocols GitHub no longer accepts.
     try {
         [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
-    } catch {
+    }
+    catch {
         Write-Verbose "Could not raise the TLS version: $($_.Exception.Message)"
     }
 
@@ -198,7 +200,8 @@ function Invoke-CalmOsBootstrap {
                 try {
                     Invoke-WebRequest -Uri $url -OutFile $Destination -UseBasicParsing -TimeoutSec 300
                     return
-                } catch {
+                }
+                catch {
                     $lastError = $_
                     $status = $null
                     try { $status = [int]$_.Exception.Response.StatusCode } catch { }
@@ -255,7 +258,8 @@ function Invoke-CalmOsBootstrap {
         Assert-DevConfigProtectedTree -Directory $setupDir
         if ($AllowUnsigned) {
             Write-Host '  Using the unsigned source copy because -AllowUnsigned was passed.' -ForegroundColor Yellow
-        } else {
+        }
+        else {
             Write-Host '  Using the signed release copy.' -ForegroundColor DarkGray
             Assert-DevConfigMicrosoftSigned -Directory $setupDir
         }
@@ -294,7 +298,8 @@ function Invoke-CalmOsBootstrap {
         if ($proc.ExitCode -ne 0) {
             throw "Setup finished with exit code $($proc.ExitCode). The log is in $InstallRoot."
         }
-    } finally {
+    }
+    finally {
         if (Test-Path -LiteralPath $work) {
             Remove-Item -LiteralPath $work -Recurse -Force
         }
